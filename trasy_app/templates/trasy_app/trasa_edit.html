@@ -1,0 +1,291 @@
+{% extends "trasy_app/base.html" %}
+{% load static %}
+{% block content %}
+    <h2>Edycja trasy: {{ trasa.nazwa }}</h2>
+    
+    <div class="canvas-container">
+        <img src="{{ trasa.obraz_tla.obraz.url }}" alt="{{ trasa.obraz_tla.nazwa }}" id="tlo-img">
+        <canvas id="trasa-canvas" class="canvas-overlay" width="{{ trasa.obraz_tla.szerokosc }}" height="{{ trasa.obraz_tla.wysokosc }}"></canvas>
+    </div>
+    
+    <h3>Dodaj nowy punkt</h3>
+    <p>Możesz dodać punkt, klikając bezpośrednio na obrazie lub używając poniższego formularza:</p>
+    
+    <form id="punkt-form" method="POST">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn">Dodaj punkt</button>
+    </form>
+    
+    <h3>Lista punktów</h3>
+    <table id="punkty-tabela">
+        <thead>
+            <tr>
+                <th>Kolejność</th>
+                <th>X</th>
+                <th>Y</th>
+                <th>Akcje</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for punkt in punkty %}
+                <tr data-punkt-id="{{ punkt.id }}">
+                    <td>{{ punkt.kolejnosc }}</td>
+                    <td>{{ punkt.x }}</td>
+                    <td>{{ punkt.y }}</td>
+                    <td>
+                        {% if not forloop.first %}
+                        <button class="btn move-up" data-punkt-id="{{ punkt.id }}">▲</button>
+                        {% endif %}
+                        {% if not forloop.last %}
+                        <button class="btn move-down" data-punkt-id="{{ punkt.id }}">▼</button>
+                        {% endif %}
+                        <button class="btn btn-danger delete-punkt" data-punkt-id="{{ punkt.id }}">Usuń</button>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr id="no-punkty-row">
+                    <td colspan="4">Brak punktów w tej trasie. Dodaj pierwszy punkt.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <p><a href="{% url 'user_trasy' %}">Wróć do listy tras</a></p>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const canvas = document.getElementById('trasa-canvas');
+            const ctx = canvas.getContext('2d');
+            const img = document.getElementById('tlo-img');
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            
+            // Punkty trasy
+            let punkty = [
+                {% for punkt in punkty %}
+                    {id: {{ punkt.id }}, x: {{ punkt.x }}, y: {{ punkt.y }}, kolejnosc: {{ punkt.kolejnosc }}},
+                {% endfor %}
+            ];
+
+            // Czekaj na załadowanie obrazu
+            img.onload = function() {
+                canvas.width = img.width;
+                canvas.height = img.height;
+                rysujTrase();
+            };
+
+            // Funkcja rysująca trasę
+            function rysujTrase() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Rysuj linie między punktami
+                if (punkty.length > 1) {
+                    ctx.beginPath();
+                    ctx.moveTo(punkty[0].x, punkty[0].y);
+                    for (let i = 1; i < punkty.length; i++) {
+                        ctx.lineTo(punkty[i].x, punkty[i].y);
+                    }
+                    ctx.strokeStyle = 'red';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+                
+                // Rysuj punkty
+                punkty.forEach(function(punkt, index) {
+                    ctx.beginPath();
+                    ctx.arc(punkt.x, punkt.y, 5, 0, 2 * Math.PI);
+                    ctx.fillStyle = 'blue';
+                    ctx.fill();
+                    
+                    // Numeracja punktów
+                    ctx.fillStyle = 'black';
+                    ctx.font = '12px Arial';
+                    ctx.fillText((index + 1).toString(), punkt.x + 8, punkt.y + 5);
+                });
+            }
+
+            // Obsługa kliknięcia na obraz do dodawania punktów
+            canvas.addEventListener('click', function(e) {
+                const rect = canvas.getBoundingClientRect();
+                const x = Math.round(e.clientX - rect.left);
+                const y = Math.round(e.clientY - rect.top);
+                
+                fetch("{% url 'add_point_click' trasa.id %}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: `x=${x}&y=${y}`
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Pobierz zaktualizowane punkty
+                        fetch("{% url 'get_punkty' trasa.id %}", {
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            punkty = data.punkty;
+                            aktualizujTabele();
+                            rysujTrase();
+                        });
+                    }
+                })
+                .catch(error => console.error('Błąd:', error));
+            });
+
+            // Obsługa formularza dodawania punktu
+            document.getElementById('punkt-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const formData = new FormData(this);
+                
+                fetch(window.location.href, {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        fetch("{% url 'get_punkty' trasa.id %}", {
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            punkty = data.punkty;
+                            aktualizujTabele();
+                            rysujTrase();
+                        });
+                    }
+                })
+                .catch(error => console.error('Błąd:', error));
+            });
+
+            // Obsługa usuwania punktów
+            document.addEventListener('click', function(e) {
+                if (e.target.classList.contains('delete-punkt')) {
+                    e.preventDefault();
+                    const punktId = e.target.dataset.punktId;
+                    
+                    fetch(`/punkt/delete/${punktId}/`, {
+                        method: 'GET',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            punkty = data.punkty;
+                            aktualizujTabele();
+                            rysujTrase();
+                        }
+                    })
+                    .catch(error => console.error('Błąd:', error));
+                }
+            });
+
+            // Obsługa przesuwania punktów
+            document.addEventListener('click', function(e) {
+                if (e.target.classList.contains('move-up') || e.target.classList.contains('move-down')) {
+                    e.preventDefault();
+                    const punktId = e.target.dataset.punktId;
+                    const kierunek = e.target.classList.contains('move-up') ? 'up' : 'down';
+                    
+                    fetch(`/punkt/move/${punktId}/${kierunek}/`, {
+                        method: 'GET',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            punkty = data.punkty;
+                            aktualizujTabele();
+                            rysujTrase();
+                        }
+                    })
+                    .catch(error => console.error('Błąd:', error));
+                }
+            });
+
+            // Funkcja aktualizująca tabelę punktów
+            function aktualizujTabele() {
+                const tbody = document.querySelector('#punkty-tabela tbody');
+                tbody.innerHTML = '';
+                
+                if (punkty.length === 0) {
+                    const tr = document.createElement('tr');
+                    tr.id = 'no-punkty-row';
+                    tr.innerHTML = '<td colspan="4">Brak punktów w tej trasie. Dodaj pierwszy punkt.</td>';
+                    tbody.appendChild(tr);
+                    return;
+                }
+                
+                punkty.forEach((punkt, index) => {
+                    const tr = document.createElement('tr');
+                    tr.dataset.punktId = punkt.id;
+                    
+                    const tdKolejnosc = document.createElement('td');
+                    tdKolejnosc.textContent = punkt.kolejnosc;
+                    
+                    const tdX = document.createElement('td');
+                    tdX.textContent = punkt.x;
+                    
+                    const tdY = document.createElement('td');
+                    tdY.textContent = punkt.y;
+                    
+                    const tdAkcje = document.createElement('td');
+                    
+                    // Przycisk w górę (jeśli nie pierwszy punkt)
+                    if (index > 0) {
+                        const btnUp = document.createElement('button');
+                        btnUp.classList.add('btn', 'move-up');
+                        btnUp.dataset.punktId = punkt.id;
+                        btnUp.textContent = '▲';
+                        tdAkcje.appendChild(btnUp);
+                    }
+                    
+                    // Przycisk w dół (jeśli nie ostatni punkt)
+                    if (index < punkty.length - 1) {
+                        const btnDown = document.createElement('button');
+                        btnDown.classList.add('btn', 'move-down');
+                        btnDown.dataset.punktId = punkt.id;
+                        btnDown.textContent = '▼';
+                        tdAkcje.appendChild(btnDown);
+                    }
+                    
+                    // Przycisk usuwania
+                    const btnDelete = document.createElement('button');
+                    btnDelete.classList.add('btn', 'btn-danger', 'delete-punkt');
+                    btnDelete.dataset.punktId = punkt.id;
+                    btnDelete.textContent = 'Usuń';
+                    tdAkcje.appendChild(btnDelete);
+                    
+                    tr.appendChild(tdKolejnosc);
+                    tr.appendChild(tdX);
+                    tr.appendChild(tdY);
+                    tr.appendChild(tdAkcje);
+                    
+                    tbody.appendChild(tr);
+                });
+            }
+
+            // Inicjalne rysowanie trasy jeśli obraz już załadowany
+            if (img.complete) {
+                rysujTrase();
+            }
+        });
+    </script>
+{% endblock %}

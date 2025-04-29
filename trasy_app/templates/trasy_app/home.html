@@ -1,0 +1,16 @@
+{% extends "trasy_app/base.html" %}
+{% block content %}
+    <h1>Witaj w Interaktywnym Edytorze Tras</h1>
+    <p>Ta aplikacja pozwala na tworzenie i edycję tras na wybranych obrazach tła.</p>
+    
+    {% if user.is_authenticated %}
+        <p>Jesteś zalogowany jako {{ user.username }}.</p>
+        <p>Co chcesz zrobić?</p>
+        <ul>
+            <li><a href="{% url 'tlo_list' %}">Wybierz obraz tła i stwórz nową trasę</a></li>
+            <li><a href="{% url 'user_trasy' %}">Przeglądaj i edytuj swoje trasy</a></li>
+        </ul>
+    {% else %}
+        <p>Aby rozpocząć pracę z aplikacją, musisz się <a href="{% url 'login' %}">zalogować</a> lub <a href="{% url 'register' %}">zarejestrować</a>.</p>
+    {% endif %}
+{% endblock %}

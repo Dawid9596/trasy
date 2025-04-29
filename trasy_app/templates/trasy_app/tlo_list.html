@@ -1,0 +1,20 @@
+{% extends "trasy_app/base.html" %}
+{% block content %}
+    <h2>Dostępne obrazy tła</h2>
+    <p>Wybierz obraz tła, na którym chcesz utworzyć nową trasę:</p>
+    
+    <div class="obrazy-tla">
+        {% for tlo in tla %}
+            <div class="obraz-tla">
+                <h3>{{ tlo.nazwa }}</h3>
+                <p>{{ tlo.opis }}</p>
+                <img src="{{ tlo.obraz.url }}" alt="{{ tlo.nazwa }}" style="max-width: 300px;">
+                <p>Wymiary: {{ tlo.szerokosc }} x {{ tlo.wysokosc }} px</p>
+                <a href="{% url 'trasa_create' tlo.id %}" class="btn">Utwórz trasę na tym tle</a>
+            </div>
+            <hr>
+        {% empty %}
+            <p>Brak dostępnych obrazów tła. Poproś administratora o dodanie obrazów.</p>
+        {% endfor %}
+    </div>
+{% endblock %}

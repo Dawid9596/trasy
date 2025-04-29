@@ -1,0 +1,35 @@
+{% extends "trasy_app/base.html" %}
+{% block content %}
+    <h2>Moje trasy</h2>
+    
+    {% if trasy %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Nazwa</th>
+                    <th>Obraz tła</th>
+                    <th>Data utworzenia</th>
+                    <th>Ostatnia modyfikacja</th>
+                    <th>Liczba punktów</th>
+                    <th>Akcje</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for trasa in trasy %}
+                    <tr>
+                        <td>{{ trasa.nazwa }}</td>
+                        <td>{{ trasa.obraz_tla.nazwa }}</td>
+                        <td>{{ trasa.data_utworzenia|date:"d.m.Y H:i" }}</td>
+                        <td>{{ trasa.data_modyfikacji|date:"d.m.Y H:i" }}</td>
+                        <td>{{ trasa.punkty.count }}</td>
+                        <td>
+                            <a href="{% url 'trasa_edit' trasa.id %}" class="btn">Edytuj</a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>Nie masz jeszcze żadnych tras. <a href="{% url 'tlo_list' %}">Utwórz swoją pierwszą trasę</a>.</p>
+    {% endif %}
+{% endblock %}

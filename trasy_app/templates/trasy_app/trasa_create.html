@@ -1,0 +1,14 @@
+{% extends "trasy_app/base.html" %}
+{% block content %}
+    <h2>Tworzenie nowej trasy</h2>
+    <h3>Obraz tła: {{ tlo.nazwa }}</h3>
+    <img src="{{ tlo.obraz.url }}" alt="{{ tlo.nazwa }}" style="max-width: 300px;">
+    
+    <form method="POST">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn">Utwórz trasę</button>
+    </form>
+    
+    <p><a href="{% url 'tlo_list' %}">Wróć do listy obrazów tła</a></p>
+{% endblock %}

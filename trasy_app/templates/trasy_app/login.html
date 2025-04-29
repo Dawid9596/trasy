@@ -1,0 +1,19 @@
+{% extends "trasy_app/base.html" %}
+{% block content %}
+    <h2>Logowanie</h2>
+    <form method="POST">
+        {% csrf_token %}
+        <fieldset>
+            <legend>Zaloguj się</legend>
+            {{ form.as_p }}
+        </fieldset>
+        <div>
+            <button type="submit" class="btn">Zaloguj</button>
+        </div>
+    </form>
+    <div>
+        <small>
+            Nie masz konta? <a href="{% url 'register' %}">Zarejestruj się teraz</a>
+        </small>
+    </div>
+{% endblock %}
