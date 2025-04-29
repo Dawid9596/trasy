@@ -10,7 +10,7 @@ From the admin panel, one can manage the available background images (maps), use
 `drf-yasg` (Swagger UI)
 ## Setup
 ```
-python3 manage.py makemigrations
+python3 manage.py makemigrations trasy_app
 python3 manage.py migrate
 ```
 Creating superuser
